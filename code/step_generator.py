@@ -107,18 +107,25 @@ def generate_steps(evaluations: List[EvaluationResult], is_deletion_authorized: 
                 "evidence_id": ev.evidence_id if is_complete_case else "",
             })
 
-    # Sort strictly: phase -> operation rank -> system_id (asc) -> resource_id (asc)
+    # Sort strictly: phase -> operation rank -> system_id (asc) -> resource_id (asc) -> state -> evidence_id
     def sort_key(s: Dict[str, Any]):
+        phase = s.get("phase", "")
+        if phase not in PHASE_RANK:
+            logger.warning(f"Unrecognized phase '{phase}' encountered in step generation (M073)")
+        # Note: PHASE_RANK partitions steps first, ensuring identical OPERATION_RANK across phases never collide (M074)
         return (
-            PHASE_RANK.get(s["phase"], 99),
-            OPERATION_RANK.get(s["operation"], 99),
-            s["system_id"].lower(),
-            s["resource_id"].lower(),
+            PHASE_RANK.get(phase, 99),
+            OPERATION_RANK.get(s.get("operation", ""), 99),
+            s.get("system_id", "").lower(),
+            s.get("resource_id", "").lower(),
+            s.get("state", "").lower(),
+            s.get("evidence_id", "").lower(),
         )
 
+    # Deterministic sort with total ordering tie-breaking (M076)
     sorted_steps = sorted(raw_steps, key=sort_key)
 
-    # Assign 1-indexed consecutive step numbers
+    # Assign 1-indexed consecutive step numbers with canonical schema keys (M077)
     final_steps: List[Dict[str, Any]] = []
     for idx, s in enumerate(sorted_steps, start=1):
         final_steps.append({

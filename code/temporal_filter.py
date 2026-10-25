@@ -40,6 +40,7 @@ def parse_iso_timestamp(ts: Optional[Union[str, datetime]]) -> Optional[datetime
     except Exception:
         pass
 
+    # Fallback parsing for non-standard formats; assumes UTC for naive inputs per challenge spec (M078)
     fallback_formats = [
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d %H:%M:%S%z",
@@ -65,6 +66,7 @@ def is_admissible(
     """
     Strict temporal admissibility test under challenge contract:
     - Evidence is admissible if and only if event_timestamp <= audit_at in UTC.
+    - The boundary is inclusive (<=): records at exact audit_at timestamp are admitted (M079).
     - If audit_at is missing or unparseable: Returns False (cannot audit without cutoff).
     - If event_timestamp is missing or unparseable: Returns False (cannot prove timing).
     """
@@ -88,6 +90,7 @@ def filter_evidence_records(
     audit_at: Optional[Union[str, datetime]],
 ) -> List[Dict[str, Any]]:
     """
+    Standalone convenience utility for filtering record collections by temporal admissibility (M080).
     Returns only records whose timestamp_key contains a valid timestamp <= audit_at.
     """
     return [r for r in records if is_admissible(r.get(timestamp_key), audit_at)]

@@ -64,6 +64,7 @@ class RuleEngine:
         self.load_rules()
 
     def load_rules(self) -> None:
+        # Fallback to hardcoded DEFAULT_RULES only if deletion_rules.csv is not present (M067)
         if not self.rules_path.exists():
             self.rules = dict(DEFAULT_RULES)
             for r in self.rules.values():
@@ -79,6 +80,8 @@ class RuleEngine:
                 if r_id:
                     rule = DeletionRule(r_id, cat, cond, act)
                     self.rules[r_id] = rule
+                    if cat in self.category_to_rule:
+                        logger.warning(f"Duplicate data_category '{cat}' found; overwriting {self.category_to_rule[cat].rule_id} with {r_id} (M068)")
                     self.category_to_rule[cat] = rule
 
     def evaluate_record(
@@ -116,8 +119,8 @@ class RuleEngine:
                 evidence_id=evidence_id,
             )
 
-        # 2. Backup Service / Restore Risk
-        if is_restore_risk or (system_id == "backup_service" and is_restore_risk):
+        # 2. Backup Service / Restore Risk (rule_14: BACKUP_ARCHIVE)
+        if rule_id == "rule_14" or system_id == "backup_service" or "backup" in resource_id or is_restore_risk:
             is_comp = not is_restore_risk
             return EvaluationResult(
                 rule_id=rule_id,

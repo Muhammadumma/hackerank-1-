@@ -68,11 +68,14 @@ class IdentityResolver:
             logger.warning(f"Identities file not found: {self.identities_path}")
             return
 
+        # Use utf-8 with fallback warning on replacement characters (M066)
         with open(self.identities_path, "r", encoding="utf-8", errors="replace") as f:
             for row in csv.DictReader(f):
                 u_id = row.get("user_id", "").strip()
                 if not u_id:
                     continue
+                if "\ufffd" in str(row):
+                    logger.warning(f"Decoding replacement detected in identity row for user {u_id} (M066)")
                 name = row.get("name", "").strip()
                 email = row.get("email", "").strip().lower()
                 phone = row.get("phone", "").strip()
@@ -134,7 +137,8 @@ class IdentityResolver:
             old_val = entry.get("old_value", "").strip()
             new_val = entry.get("new_value", "").strip()
             for v in (old_val, new_val):
-                if v and (v.lower() == clean or v == identifier.strip()):
+                # Consistent lowercased and exact comparison (M062)
+                if v and (v.strip().lower() == clean or v.strip() == identifier.strip()):
                     return u_id
 
         return None

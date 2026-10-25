@@ -78,6 +78,7 @@ class EvidenceLoader:
             logger.warning(f"Resolved evidence file does not exist: {path}")
             return LoadedEvidence(file_id, entry.origin, entry.captured_at, "missing", None, ["File not found on disk"])
 
+        # Path suffix routing (M083: inspects final extension for canonical dataset formats)
         suffix = path.suffix.lower()
 
         if suffix == ".sql":
@@ -122,6 +123,7 @@ class EvidenceLoader:
         try:
             data = json.loads(raw_text)
         except Exception as e:
+            logger.error(f"Failed to parse JSON file {path}: {e}")
             errors.append(f"JSON parse error: {e}")
             data = {}
         return data, errors
